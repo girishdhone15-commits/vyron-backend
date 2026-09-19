@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VYRON Admin — नवीन प्रॉडक्ट</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #f3f2ef; max-width: 600px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  p.hint { color: #8f8d88; font-size: 13px; margin-bottom: 24px; }
+  label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #8f8d88; margin: 16px 0 6px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; background: transparent; border: 1px solid #333; color: #f3f2ef; border-radius: 4px; font-size: 14px; }
+  small { color: #67655f; font-size: 11px; }
+  button { margin-top: 24px; width: 100%; padding: 14px; background: #f3f2ef; color: #0a0a0a; border: none; border-radius: 4px; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; }
+  #result { margin-top: 20px; padding: 12px; border-radius: 4px; font-size: 13px; white-space: pre-wrap; word-break: break-all; }
+  .ok { background: rgba(61,220,132,0.1); border: 1px solid #3ddc84; }
+  .err { background: rgba(255,92,92,0.1); border: 1px solid #ff5c5c; }
+  .printed-only { display: none; }
+</style>
+</head>
+<body>
+  <h1>नवीन प्रॉडक्ट टाका</h1>
+  <p class="hint">हे फॉर्म भरून सबमिट केलं की प्रॉडक्ट वेबसाइटवर दिसेल. फक्त तुमच्याकडे असलेला Admin Key इथे लागेल.</p>
+
+  <form id="productForm">
+    <label>Admin Key</label>
+    <input type="password" id="adminKey" required />
+    <small>.env फाइलमधला ADMIN_KEY इथे टाका (हे फक्त तुमच्याकडेच असतं)</small>
+
+    <label>Product Name</label>
+    <input type="text" id="name" required placeholder="उदा. VOID Oversized Tee" />
+
+    <label>Price (₹)</label>
+    <input type="number" id="price" required />
+
+    <label>MRP (₹) — optional, स्ट्राईकथ्रू दाखवण्यासाठी</label>
+    <input type="number" id="mrp" />
+
+    <label>Category</label>
+    <input type="text" id="category" placeholder="T-Shirts / Hoodies / Shirts..." />
+
+    <label>Description</label>
+    <textarea id="description" rows="3"></textarea>
+
+    <label>Product Image URL</label>
+    <input type="url" id="imageUrl" placeholder="https://..." required />
+    <small>वेबसाइटवर दिसणारा फोटो, आणि प्रिंट प्रॉडक्ट असेल तर तोच डिझाइन म्हणून वापरला जाईल</small>
+
+    <label>Qikink Blank Product SKU</label>
+    <input type="text" id="blankSku" required placeholder="उदा. MVnHs-Wh-S" />
+    <small>dashboard.qikink.com → SKU Descriptions पेजवरून घ्या</small>
+
+    <label>Print Type ID</label>
+    <select id="printTypeId">
+      <option value="1">1 — Plain (कुठलाही प्रिंट नाही)</option>
+      <option value="5">5 — DTF प्रिंट</option>
+      <option value="17">17 — DTF (alternate)</option>
+    </select>
+    <small>"Plain" निवडलं तर खालचे design फील्ड्स लागत नाहीत</small>
+
+    <div class="printed-only" id="printedFields">
+      <label>Mockup Image URL (optional — रिकामं ठेवलं तर वरचाच फोटो वापरला जाईल)</label>
+      <input type="url" id="mockupImageUrl" />
+
+      <label>Placement</label>
+      <select id="placementSku">
+        <option value="fr">Front</option>
+        <option value="bk">Back</option>
+        <option value="lp">Left Pocket</option>
+        <option value="rp">Right Pocket</option>
+        <option value="rs">Right Shoulder</option>
+        <option value="ls">Left Shoulder</option>
+      </select>
+
+      <label>Design Width (inches)</label>
+      <input type="number" id="widthInches" step="0.1" />
+
+      <label>Design Height (inches)</label>
+      <input type="number" id="heightInches" step="0.1" />
+    </div>
+
+    <button type="submit">प्रॉडक्ट अ‍ॅड करा</button>
+  </form>
+
+  <div id="result" style="display:none;"></div>
+
+  <script>
+    const printTypeSelect = document.getElementById('printTypeId');
+    const printedFields = document.getElementById('printedFields');
+    function toggleDesignFields() {
+      printedFields.style.display = printTypeSelect.value !== '1' ? 'block' : 'none';
+    }
+    printTypeSelect.addEventListener('change', toggleDesignFields);
+    toggleDesignFields();
+
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const resultBox = document.getElementById('result');
+      resultBox.style.display = 'block';
+      resultBox.className = '';
+      resultBox.textContent = 'पाठवत आहे...';
+
+      const body = {
+        name: document.getElementById('name').value,
+        price: document.getElementById('price').value,
+        mrp: document.getElementById('mrp').value,
+        category: document.getElementById('category').value,
+        description: document.getElementById('description').value,
+        imageUrl: document.getElementById('imageUrl').value,
+        blankSku: document.getElementById('blankSku').value,
+        printTypeId: document.getElementById('printTypeId').value,
+        mockupImageUrl: document.getElementById('mockupImageUrl').value,
+        placementSku: document.getElementById('placementSku').value,
+        widthInches: document.getElementById('widthInches').value,
+        heightInches: document.getElementById('heightInches').value,
+      };
+
+      try {
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': document.getElementById('adminKey').value,
+          },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          resultBox.className = 'ok';
+          resultBox.textContent = 'यशस्वी! प्रॉडक्ट अ‍ॅड झाला.\n\n' + JSON.stringify(data, null, 2);
+          document.getElementById('productForm').reset();
+          toggleDesignFields();
+        } else {
+          resultBox.className = 'err';
+          resultBox.textContent = 'Error: ' + JSON.stringify(data, null, 2);
+        }
+      } catch (err) {
+        resultBox.className = 'err';
+        resultBox.textContent = 'Network error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
